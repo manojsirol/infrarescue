@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>InfraRescue Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <div>
+                <h1>InfraRescue</h1>
+                <p>Automated Infrastructure Incident Detection and Safe Recovery Platform</p>
+            </div>
+
+            <div class="live-status">
+                <span class="pulse"></span>
+                LIVE MONITORING
+            </div>
+        </header>
+
+
+        <section class="health-section">
+
+            <div class="system-status healthy" id="systemStatus">
+                ALL SYSTEMS OPERATIONAL
+            </div>
+
+            <p class="last-updated">
+                Dashboard updates automatically every 5 seconds
+            </p>
+
+        </section>
+
+
+        <section class="stats-grid">
+
+            <div class="card">
+                <p class="card-title">Services Checked</p>
+                <h2 id="servicesChecked">0</h2>
+            </div>
+
+            <div class="card">
+                <p class="card-title">Running</p>
+                <h2 class="success" id="runningServices">0</h2>
+            </div>
+
+            <div class="card">
+                <p class="card-title">Active Incidents</p>
+                <h2 class="danger" id="activeIncidents">0</h2>
+            </div>
+
+            <div class="card">
+                <p class="card-title">System Health</p>
+                <h2 id="systemHealth">Checking...</h2>
+            </div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="section-header">
+                <div>
+                    <h2>Infrastructure Checks</h2>
+                    <p>Step-by-step system diagnosis</p>
+                </div>
+            </div>
+
+
+            <div class="service-list">
+
+                <div class="service-item">
+                    <div class="service-left">
+                        <span class="status-dot healthy-dot"></span>
+                        <div>
+                            <h3>1. Host System</h3>
+                            <p>System available and responding</p>
+                        </div>
+                    </div>
+
+                    <span class="badge success-badge">HEALTHY</span>
+                </div>
+
+
+                <div class="service-item">
+                    <div class="service-left">
+                        <span class="status-dot healthy-dot"></span>
+                        <div>
+                            <h3>2. Docker Engine</h3>
+                            <p>Docker service available</p>
+                        </div>
+                    </div>
+
+                    <span class="badge success-badge">RUNNING</span>
+                </div>
+
+
+                <div class="service-item">
+                    <div class="service-left">
+                        <span class="status-dot healthy-dot"></span>
+                        <div>
+                            <h3>3. Network Connectivity</h3>
+                            <p>Network connection available</p>
+                        </div>
+                    </div>
+
+                    <span class="badge success-badge">HEALTHY</span>
+                </div>
+
+
+                <div class="service-item" id="applicationService">
+
+                    <div class="service-left">
+                        <span class="status-dot healthy-dot" id="applicationDot"></span>
+
+                        <div>
+                            <h3>4. Application Container</h3>
+
+                            <p id="applicationMessage">
+                                infrarescue-app is running
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <span class="badge success-badge" id="applicationBadge">
+                        RUNNING
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Incident History</h2>
+                    <p>Detected infrastructure incidents</p>
+                </div>
+
+            </div>
+
+
+            <div id="incidentList">
+
+                <div class="empty-state">
+                    No incidents detected. Infrastructure is operating normally.
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <footer>
+            <p>InfraRescue • Open Source Infrastructure Monitoring and Recovery Platform</p>
+        </footer>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+
+</html>

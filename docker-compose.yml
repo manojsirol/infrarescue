@@ -1,0 +1,7 @@
+services:
+  web-app:
+    build: ./app
+    container_name: infrarescue-app
+    ports:
+      - "8000:8000"
+    restart: "no"
