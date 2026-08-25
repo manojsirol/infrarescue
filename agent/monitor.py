@@ -1,32 +1,50 @@
-import docker
+import subprocess
 import json
 import os
 import time
 from datetime import datetime
 
 
-# Connect to Docker
-client = docker.from_env()
+CHECK_INTERVAL = 10
 
+CONTAINER_NAME = "infrarescue-app"
 
-# Project base directory
-BASE_DIR = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
-
-
-# Incident file location
 INCIDENT_FILE = os.path.join(
-    BASE_DIR,
+    os.path.dirname(os.path.dirname(__file__)),
     "incidents",
     "incidents.json"
 )
 
 
-# Container to monitor
-CONTAINER_NAME = "infrarescue-app"
+def get_timestamp():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def run_command(command):
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        return result.stdout.strip(), result.stderr.strip()
+
+    except Exception as error:
+        return "", str(error)
+
+
+def check_container():
+
+    output, error = run_command(
+        ["docker", "inspect", "-f", "{{.State.Running}}", CONTAINER_NAME]
+    )
+
+    if error:
+        return False
+
+    return output.lower() == "true"
 
 
 def load_incidents():
@@ -36,441 +54,168 @@ def load_incidents():
 
     try:
         with open(INCIDENT_FILE, "r") as file:
-            return json.load(file)
+            data = json.load(file)
 
-    except (json.JSONDecodeError, FileNotFoundError):
+            if isinstance(data, list):
+                return data
+
+            return []
+
+    except Exception:
         return []
 
 
 def save_incidents(incidents):
 
+    os.makedirs(os.path.dirname(INCIDENT_FILE), exist_ok=True)
+
     with open(INCIDENT_FILE, "w") as file:
-        json.dump(
-            incidents,
-            file,
-            indent=4
-        )
+        json.dump(incidents, file, indent=4)
 
 
-def get_container():
+def create_incident():
 
-    try:
-
-        container = client.containers.get(
-            CONTAINER_NAME
-        )
-
-        return container
-
-    except docker.errors.NotFound:
-
-        return None
-
-
-def create_incident(problem, classification):
+    incident = {
+        "id": f"INC-{int(time.time())}",
+        "service": CONTAINER_NAME,
+        "timestamp": get_timestamp(),
+        "status": "OPEN",
+        "failure_type": "Container Stopped",
+        "known_issue": True,
+        "message": f"{CONTAINER_NAME} is not running",
+        "resolution": None,
+        "resolved_at": None
+    }
 
     incidents = load_incidents()
 
-
-    incident = {
-
-        "id": f"INC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-
-        "service": CONTAINER_NAME,
-
-        "detected_at":
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-
-        "problem": problem,
-
-        "classification": classification,
-
-        "action": "Diagnosis in progress",
-
-        "status": "Open",
-
-        "resolved_at": None
-
-    }
-
-
-    incidents.append(incident)
+    incidents.insert(0, incident)
 
     save_incidents(incidents)
+
+    print(f"[INCIDENT CREATED] {incident['id']}")
 
     return incident
 
 
-def update_incident(
-    incident_id,
-    status,
-    action,
-    resolved_at=None
-):
+def resolve_incident(incident):
+
+    print("[RECOVERY] Attempting safe recovery...")
+
+    output, error = run_command(
+        ["docker", "start", CONTAINER_NAME]
+    )
+
+    if error:
+        print(f"[RECOVERY ERROR] {error}")
+
+    time.sleep(3)
+
+    is_running = check_container()
 
     incidents = load_incidents()
 
+    for item in incidents:
 
-    for incident in incidents:
+        if item["id"] == incident["id"]:
 
-        if incident["id"] == incident_id:
+            if is_running:
 
-            incident["status"] = status
+                item["status"] = "RESOLVED"
+                item["resolution"] = "Container restarted successfully"
+                item["resolved_at"] = get_timestamp()
 
-            incident["action"] = action
+                print("[RESOLVED] Container restarted successfully")
 
-            if resolved_at:
+            else:
 
-                incident["resolved_at"] = resolved_at
+                item["status"] = "ESCALATED"
+                item["resolution"] = (
+                    "Automatic recovery failed. "
+                    "Manual engineer investigation required."
+                )
 
+                print("[ESCALATED] Manual investigation required")
+
+            break
 
     save_incidents(incidents)
 
 
-def verify_application_health():
+def has_open_incident():
 
-    container = get_container()
+    incidents = load_incidents()
 
+    for incident in incidents:
 
-    if container is None:
+        if (
+            incident["service"] == CONTAINER_NAME
+            and incident["status"] == "OPEN"
+        ):
+            return True
 
-        return False
+    return False
 
 
-    container.reload()
+def monitor():
 
+    print("==========================================")
+    print("       InfraRescue Monitoring Agent")
+    print("==========================================")
+    print(f"Monitoring: {CONTAINER_NAME}")
+    print(f"Check interval: {CHECK_INTERVAL} seconds")
+    print("Press CTRL + C to stop monitoring")
+    print("==========================================")
 
-    if container.status != "running":
+    while True:
 
-        return False
+        try:
 
+            print(f"\n[{get_timestamp()}] Checking infrastructure...")
 
-    return True
+            is_running = check_container()
 
+            if is_running:
 
-def safe_recovery(incident):
+                print(f"[HEALTHY] {CONTAINER_NAME} is running")
 
-    print("\n" + "=" * 50)
+            else:
 
-    print("SAFE AUTO-RECOVERY STARTED")
+                print(f"[DOWN] {CONTAINER_NAME} is NOT running")
 
-    print("=" * 50)
+                if has_open_incident():
 
+                    print(
+                        "[INFO] Incident already exists. "
+                        "Waiting for recovery result."
+                    )
 
-    print("\n[RECOVERY 1/3] Attempting container restart...")
+                else:
 
+                    print("[DIAGNOSIS] Checking known failure patterns...")
 
-    try:
+                    print(
+                        "[KNOWN ISSUE] Container stopped"
+                    )
 
-        container = get_container()
+                    incident = create_incident()
 
+                    resolve_incident(incident)
 
-        if container is None:
+            time.sleep(CHECK_INTERVAL)
 
-            print("Container not found.")
+        except KeyboardInterrupt:
 
-            return False
+            print("\nMonitoring stopped by user.")
 
+            break
 
-        container.start()
+        except Exception as error:
 
+            print(f"[AGENT ERROR] {error}")
 
-        print(
-            f"✓ Restart command sent to "
-            f"{CONTAINER_NAME}"
-        )
-
-
-    except Exception as error:
-
-        print(
-            f"✗ Recovery failed: {error}"
-        )
-
-        return False
-
-
-    print(
-        "\n[RECOVERY 2/3] Waiting for "
-        "application to start..."
-    )
-
-
-    time.sleep(3)
-
-
-    print(
-        "\n[RECOVERY 3/3] Verifying "
-        "application health..."
-    )
-
-
-    if verify_application_health():
-
-        print(
-            "✓ Container is running after "
-            "recovery"
-        )
-
-
-        update_incident(
-
-            incident["id"],
-
-            "Resolved",
-
-            "Container automatically restarted "
-            "and health check passed",
-
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-        )
-
-
-        print(
-            "\n✓ INCIDENT RESOLVED "
-            "AUTOMATICALLY"
-        )
-
-
-        return True
-
-
-    else:
-
-        print(
-            "✗ Application recovery verification "
-            "failed"
-        )
-
-
-        update_incident(
-
-            incident["id"],
-
-            "Escalated",
-
-            "Automatic recovery failed. "
-            "Manual engineer investigation required."
-        )
-
-
-        return False
-
-
-def monitor_container():
-
-    print("\n" + "=" * 55)
-
-    print("INFRARESCUE - INFRASTRUCTURE CHECK")
-
-    print("=" * 55)
-
-
-    # STEP 1
-
-    print(
-        "\n[1/4] Checking Docker Engine..."
-    )
-
-
-    try:
-
-        client.ping()
-
-        print(
-            "✓ Docker Engine is running"
-        )
-
-
-    except Exception as error:
-
-        print(
-            "✗ Docker Engine is NOT reachable"
-        )
-
-
-        incident = create_incident(
-
-            "Docker Engine is not reachable",
-
-            "Unknown Incident"
-        )
-
-
-        update_incident(
-
-            incident["id"],
-
-            "Escalated",
-
-            "Manual investigation required"
-        )
-
-
-        return
-
-
-    # STEP 2
-
-    print(
-        "\n[2/4] Checking application "
-        "container..."
-    )
-
-
-    container = get_container()
-
-
-    if container is None:
-
-        print(
-            "✗ Application container "
-            "not found"
-        )
-
-
-        incident = create_incident(
-
-            "Application container not found",
-
-            "Unknown Incident"
-        )
-
-
-        update_incident(
-
-            incident["id"],
-
-            "Escalated",
-
-            "Manual investigation required"
-        )
-
-
-        return
-
-
-    container.reload()
-
-
-    print(
-        f"Container status: "
-        f"{container.status}"
-    )
-
-
-    # STEP 3
-
-    print(
-        "\n[3/4] Diagnosing application "
-        "status..."
-    )
-
-
-    if container.status == "running":
-
-        print(
-            "✓ Application container "
-            "is running"
-        )
-
-
-        print(
-            "\n[4/4] Infrastructure check "
-            "completed"
-        )
-
-
-        print(
-            "\nRESULT: ALL SYSTEMS "
-            "OPERATIONAL"
-        )
-
-
-        return
-
-
-    elif container.status == "exited":
-
-        print(
-            "✗ Application container "
-            "is STOPPED"
-        )
-
-
-        print("\nDiagnosis:")
-
-        print(
-            "Docker Engine: RUNNING"
-        )
-
-        print(
-            "Application Container: STOPPED"
-        )
-
-
-        print(
-            "\nClassification: "
-            "KNOWN INCIDENT"
-        )
-
-
-        print(
-            "Recovery Runbook: "
-            "Restart Application Container"
-        )
-
-
-        incident = create_incident(
-
-            "Application container stopped",
-
-            "Known Incident"
-        )
-
-
-        # STEP 4
-
-        print(
-            "\n[4/4] Starting safe recovery..."
-        )
-
-
-        safe_recovery(incident)
-
-
-    else:
-
-        print(
-            f"✗ Unexpected container "
-            f"status: {container.status}"
-        )
-
-
-        incident = create_incident(
-
-            f"Unexpected container status: "
-            f"{container.status}",
-
-            "Unknown Incident"
-        )
-
-
-        update_incident(
-
-            incident["id"],
-
-            "Escalated",
-
-            "Unknown problem. "
-            "Manual engineer investigation required."
-        )
+            time.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
-
-    monitor_container()
+    monitor()

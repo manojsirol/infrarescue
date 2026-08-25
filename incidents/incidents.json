@@ -1,31 +1,13 @@
 [
     {
-        "id": "INC-20260823145444",
+        "id": "INC-1787648087",
         "service": "infrarescue-app",
-        "detected_at": "2026-08-23 14:54:44",
-        "problem": "Application container stopped",
-        "classification": "Known Incident",
-        "action": "Container can be safely restarted",
-        "status": "Open"
-    },
-    {
-        "id": "INC-20260823151505",
-        "service": "infrarescue-app",
-        "detected_at": "2026-08-23 15:15:05",
-        "problem": "Application container stopped",
-        "classification": "Known Incident",
-        "action": "Container automatically restarted and health check passed",
-        "status": "Resolved",
-        "resolved_at": "2026-08-23 15:15:08"
-    },
-    {
-        "id": "INC-20260823151626",
-        "service": "infrarescue-app",
-        "detected_at": "2026-08-23 15:16:26",
-        "problem": "Application container stopped",
-        "classification": "Known Incident",
-        "action": "Container automatically restarted and health check passed",
-        "status": "Resolved",
-        "resolved_at": "2026-08-23 15:16:29"
+        "timestamp": "2026-08-25 14:24:47",
+        "status": "RESOLVED",
+        "failure_type": "Container Stopped",
+        "known_issue": true,
+        "message": "infrarescue-app is not running",
+        "resolution": "Container restarted successfully",
+        "resolved_at": "2026-08-25 14:24:50"
     }
 ]
