@@ -4,6 +4,8 @@ import os
 import time
 from datetime import datetime
 
+from healthcheck import run_all_checks
+
 
 CHECK_INTERVAL = 10
 
@@ -46,6 +48,21 @@ def check_container():
 
     return output.lower() == "true"
 
+def get_failed_checks():
+    """
+    Run all infrastructure health checks
+    and return the complete results plus failures.
+    """
+
+    results = run_all_checks()
+
+    failures = []
+
+    for result in results:
+        if result["status"] in ["down", "critical", "unhealthy"]:
+            failures.append(result)
+
+    return results, failures
 
 def load_incidents():
 
@@ -173,15 +190,26 @@ def monitor():
 
             print(f"\n[{get_timestamp()}] Checking infrastructure...")
 
-            is_running = check_container()
+            results, failures = get_failed_checks()
 
-            if is_running:
+            if not failures:
 
-                print(f"[HEALTHY] {CONTAINER_NAME} is running")
+                print("[HEALTHY] All infrastructure checks passed")
 
             else:
 
-                print(f"[DOWN] {CONTAINER_NAME} is NOT running")
+                print(
+                    f"[FAILURE] {len(failures)} infrastructure "
+                    f"check(s) failed"
+                )
+
+                for failure in failures:
+
+                    print(
+                        f"    [{failure['status'].upper()}] "
+                        f"{failure['component']}: "
+                        f"{failure['message']}"
+                    )
 
                 if has_open_incident():
 
@@ -194,9 +222,7 @@ def monitor():
 
                     print("[DIAGNOSIS] Checking known failure patterns...")
 
-                    print(
-                        "[KNOWN ISSUE] Container stopped"
-                    )
+                    print("[KNOWN ISSUE] Infrastructure failure detected")
 
                     incident = create_incident()
 

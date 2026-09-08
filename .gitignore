@@ -1,33 +1,79 @@
-# Python cache
+# ==========================================
+# Python
+# ==========================================
+
 __pycache__/
 *.py[cod]
+*.pyo
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Environment and secrets
-.env
-.env.*
-*.env
-
 # Python packaging
 build/
 dist/
 *.egg-info/
 
-# IDE and editor files
+
+# ==========================================
+# Environment & Secrets
+# ==========================================
+
+.env
+.env.*
+*.env
+
+# Credentials
+credentials
+credentials.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# AWS
+.aws/
+aws-credentials
+terraform.tfstate
+terraform.tfstate.*
+.terraform/
+
+
+
+# ==========================================
+# Runtime Data
+# ==========================================
+
+incidents/*.json
+logs/
+*.log
+
+# Keep incident directory structure
+!incidents/.gitkeep
+
+
+# ==========================================
+# IDE
+# ==========================================
+
 .vscode/
 .idea/
 
-# Operating system files
+
+# ==========================================
+# OS
+# ==========================================
+
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
 
-# Temporary files
+# ==========================================
+# Temporary Files
+# ==========================================
+
 *.tmp
 *.temp
+*.swp
