@@ -1,8 +1,13 @@
+import socket
 import subprocess
 import time
+import urllib.error
+import urllib.request
 
 
 CONTAINER_NAME = "infrarescue-app"
+APPLICATION_PORT = 8000
+APPLICATION_URL = "http://localhost:8000/health"
 
 
 def run_command(command):
@@ -61,10 +66,119 @@ def check_container_running():
     return result["stdout"].lower() == "true"
 
 
+def check_application_port():
+    """
+    Verify whether the application port is accepting TCP connections.
+    """
+
+    sock = socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM
+    )
+
+    sock.settimeout(2)
+
+    try:
+        result = sock.connect_ex(
+            ("127.0.0.1", APPLICATION_PORT)
+        )
+
+        return result == 0
+
+    except Exception:
+        return False
+
+    finally:
+        sock.close()
+
+
+def check_application_health():
+    """
+    Verify whether the application health endpoint returns HTTP 200.
+    """
+
+    try:
+        response = urllib.request.urlopen(
+            APPLICATION_URL,
+            timeout=5
+        )
+
+        return response.status == 200
+
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError
+    ):
+        return False
+
+    except Exception:
+        return False
+
+
+def verify_recovery():
+    """
+    Perform full post-remediation verification.
+
+    Recovery is considered successful only if:
+
+    1. Container is running
+    2. Port 8000 is reachable
+    3. /health returns HTTP 200
+    """
+
+    print("[VERIFY] Checking container state...")
+
+    if not check_container_running():
+        return {
+            "success": False,
+            "message": "Container is not running after remediation"
+        }
+
+    print("[VERIFY] Container is running")
+
+    print("[VERIFY] Checking application port...")
+
+    if not check_application_port():
+        return {
+            "success": False,
+            "message": (
+                f"Container is running but port "
+                f"{APPLICATION_PORT} is unavailable"
+            )
+        }
+
+    print(
+        f"[VERIFY] Port "
+        f"{APPLICATION_PORT} is reachable"
+    )
+
+    print("[VERIFY] Checking application health endpoint...")
+
+    if not check_application_health():
+        return {
+            "success": False,
+            "message": (
+                "Container and port are available "
+                "but application health check failed"
+            )
+        }
+
+    print("[VERIFY] Application health check passed")
+
+    return {
+        "success": True,
+        "message": (
+            "Container, application port and health "
+            "endpoint verified successfully"
+        )
+    }
+
+
 def restart_container():
     """
-    Attempt a safe restart of the application container
-    and verify that it is running afterward.
+    Restart the application container and perform
+    full post-remediation verification.
     """
 
     print("[REMEDIATION] Restarting application container...")
@@ -81,22 +195,29 @@ def restart_container():
         return {
             "success": False,
             "action": "RESTART_CONTAINER",
-            "message": result["stderr"] or "Container restart failed"
+            "message": (
+                result["stderr"]
+                or "Container restart failed"
+            )
         }
+
+    print("[REMEDIATION] Container start command completed")
 
     time.sleep(3)
 
-    if check_container_running():
+    verification = verify_recovery()
+
+    if verification["success"]:
         return {
             "success": True,
             "action": "RESTART_CONTAINER",
-            "message": "Container restarted successfully"
+            "message": verification["message"]
         }
 
     return {
         "success": False,
         "action": "RESTART_CONTAINER",
-        "message": "Container restart command completed but verification failed"
+        "message": verification["message"]
     }
 
 
