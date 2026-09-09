@@ -1,3 +1,4 @@
+import platform
 import socket
 import subprocess
 import time
@@ -221,6 +222,42 @@ def restart_container():
     }
 
 
+def start_docker_service():
+    """
+    Handle Docker service recovery safely.
+
+    During local development on Windows + Docker Desktop,
+    InfraRescue does not attempt to start Docker automatically.
+
+    In the future Linux/EC2 environment, Docker service
+    recovery will be handled through a controlled Ansible runbook.
+    """
+
+    operating_system = platform.system()
+
+    if operating_system == "Windows":
+        return {
+            "success": False,
+            "action": "ESCALATE",
+            "message": (
+                "Docker is unavailable. Automatic Docker service "
+                "recovery is not supported in the local Windows "
+                "Docker Desktop environment. Engineer intervention "
+                "is required."
+            )
+        }
+
+    return {
+        "success": False,
+        "action": "ESCALATE",
+        "message": (
+            "Docker service recovery is not enabled yet. "
+            "The Linux EC2 environment will use an approved "
+            "Ansible remediation runbook."
+        )
+    }
+
+
 def execute_remediation(diagnosis):
     """
     Execute only explicitly approved remediation actions.
@@ -232,6 +269,9 @@ def execute_remediation(diagnosis):
 
     if action == "RESTART_CONTAINER":
         return restart_container()
+
+    if action == "START_DOCKER":
+        return start_docker_service()
 
     if action == "ESCALATE":
         return {
