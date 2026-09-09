@@ -1,0 +1,31 @@
+---
+- name: Verify InfraRescue application
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Check application container
+      ansible.builtin.command:
+        cmd: docker inspect -f '{{.State.Running}}' infrarescue-app
+      register: container_status
+      changed_when: false
+      failed_when: false
+
+    - name: Verify container is running
+      ansible.builtin.assert:
+        that:
+          - container_status.stdout == "true"
+        fail_msg: "InfraRescue container is not running."
+        success_msg: "InfraRescue container is running."
+
+    - name: Check application health endpoint
+      ansible.builtin.uri:
+        url: http://localhost:8000/health
+        method: GET
+        status_code: 200
+        return_content: true
+      register: application_health
+
+    - name: Application verification successful
+      ansible.builtin.debug:
+        msg: "InfraRescue application health check passed."

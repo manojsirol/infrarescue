@@ -1,0 +1,35 @@
+---
+- name: Recover Docker service
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check Docker service state
+      ansible.builtin.command:
+        cmd: systemctl is-active docker
+      register: docker_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display Docker service state
+      ansible.builtin.debug:
+        msg: "Docker service state: {{ docker_status.stdout }}"
+
+    - name: Start Docker service if not running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+      when: docker_status.stdout != "active"
+
+    - name: Verify Docker service
+      ansible.builtin.command:
+        cmd: systemctl is-active docker
+      register: docker_verification
+      changed_when: false
+      failed_when: docker_verification.stdout != "active"
+
+    - name: Docker recovery successful
+      ansible.builtin.debug:
+        msg: "Docker service is active and verified."
