@@ -11,8 +11,7 @@
         content: |
           [Unit]
           Description=InfraRescue Infrastructure Monitoring Agent
-          After=docker.service network.target
-          Requires=docker.service
+          After=network.target
 
           [Service]
           Type=simple

@@ -50,3 +50,8 @@
       ansible.builtin.dnf:
         name: python3-pip
         state: present
+
+    - name: Install Ansible Core
+      ansible.builtin.pip:
+        name: ansible-core
+        executable: pip3

@@ -1,3 +1,4 @@
+import os
 import platform
 import socket
 import subprocess
@@ -10,8 +11,11 @@ CONTAINER_NAME = "infrarescue-app"
 APPLICATION_PORT = 8000
 APPLICATION_URL = "http://localhost:8000/health"
 
+ANSIBLE_PLAYBOOK = "/usr/local/bin/ansible-playbook"
+DOCKER_RECOVERY_RUNBOOK = "/opt/infrarescue/runbooks/start_docker.yml"
 
-def run_command(command):
+
+def run_command(command, timeout=15):
     """
     Execute a predefined system command safely.
     """
@@ -22,7 +26,7 @@ def run_command(command):
             capture_output=True,
             text=True,
             check=False,
-            timeout=15
+            timeout=timeout
         )
 
         return {
@@ -115,6 +119,21 @@ def check_application_health():
 
     except Exception:
         return False
+
+
+def check_docker_service():
+    """
+    Verify whether the Docker engine is responding.
+    """
+
+    result = run_command(
+        [
+            "docker",
+            "info"
+        ]
+    )
+
+    return result["success"]
 
 
 def verify_recovery():
@@ -224,13 +243,8 @@ def restart_container():
 
 def start_docker_service():
     """
-    Handle Docker service recovery safely.
-
-    During local development on Windows + Docker Desktop,
-    InfraRescue does not attempt to start Docker automatically.
-
-    In the future Linux/EC2 environment, Docker service
-    recovery will be handled through a controlled Ansible runbook.
+    Recover the Docker service using the approved
+    local Ansible recovery runbook on Linux/EC2.
     """
 
     operating_system = platform.system()
@@ -247,23 +261,103 @@ def start_docker_service():
             )
         }
 
+    if not os.path.isfile(ANSIBLE_PLAYBOOK):
+        return {
+            "success": False,
+            "action": "START_DOCKER",
+            "message": (
+                "Ansible executable was not found at "
+                f"{ANSIBLE_PLAYBOOK}"
+            )
+        }
+
+    if not os.path.isfile(DOCKER_RECOVERY_RUNBOOK):
+        return {
+            "success": False,
+            "action": "START_DOCKER",
+            "message": (
+                "Docker recovery runbook was not found at "
+                f"{DOCKER_RECOVERY_RUNBOOK}"
+            )
+        }
+
+    print(
+        "[REMEDIATION] Executing approved Ansible "
+        "Docker recovery runbook..."
+    )
+
+    result = run_command(
+        [
+            ANSIBLE_PLAYBOOK,
+            "-i",
+            "localhost,",
+            "-c",
+            "local",
+            DOCKER_RECOVERY_RUNBOOK
+        ],
+        timeout=60
+    )
+
+    if not result["success"]:
+        return {
+            "success": False,
+            "action": "START_DOCKER",
+            "message": (
+                result["stderr"]
+                or result["stdout"]
+                or "Docker recovery playbook failed"
+            )
+        }
+
+    print("[REMEDIATION] Ansible recovery runbook completed")
+
+    time.sleep(2)
+
+    print("[VERIFY] Checking Docker engine...")
+
+    if not check_docker_service():
+        return {
+            "success": False,
+            "action": "START_DOCKER",
+            "message": (
+                "Ansible recovery completed but Docker "
+                "is still unavailable"
+            )
+        }
+
+    print("[VERIFY] Docker engine is responding")
+
     return {
-        "success": False,
-        "action": "ESCALATE",
+        "success": True,
+        "action": "START_DOCKER",
         "message": (
-            "Docker service recovery is not enabled yet. "
-            "The Linux EC2 environment will use an approved "
-            "Ansible remediation runbook."
+            "Docker service was recovered and verified successfully"
         )
     }
 
 
 def execute_remediation(diagnosis):
     """
-    Execute only explicitly approved remediation actions.
-
-    Unknown or unsafe actions are never executed automatically.
+    Execute only approved remediation actions based
+    on the diagnosis produced by the diagnosis engine.
     """
+
+    if not isinstance(diagnosis, dict):
+        return {
+            "success": False,
+            "action": "ESCALATE",
+            "message": "Invalid diagnosis data received"
+        }
+
+    if not diagnosis.get("known_issue"):
+        return {
+            "success": False,
+            "action": "ESCALATE",
+            "message": (
+                "Unknown infrastructure failure. "
+                "Automatic remediation is not permitted."
+            )
+        }
 
     action = diagnosis.get("recommended_action")
 
@@ -273,18 +367,10 @@ def execute_remediation(diagnosis):
     if action == "START_DOCKER":
         return start_docker_service()
 
-    if action == "ESCALATE":
-        return {
-            "success": False,
-            "action": "ESCALATE",
-            "message": (
-                "No safe automatic remediation is available. "
-                "Engineer investigation required."
-            )
-        }
-
     return {
         "success": False,
-        "action": action or "NONE",
-        "message": "No remediation action configured"
+        "action": "ESCALATE",
+        "message": (
+            f"No approved remediation exists for action: {action}"
+        )
     }

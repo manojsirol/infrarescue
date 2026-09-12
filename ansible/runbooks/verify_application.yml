@@ -4,17 +4,21 @@
   gather_facts: false
 
   tasks:
-    - name: Check application container
+    - name: Inspect application container
       ansible.builtin.command:
-        cmd: docker inspect -f '{{.State.Running}}' infrarescue-app
-      register: container_status
+        argv:
+          - docker
+          - inspect
+          - infrarescue-app
+      register: container_inspect
       changed_when: false
       failed_when: false
 
     - name: Verify container is running
       ansible.builtin.assert:
         that:
-          - container_status.stdout == "true"
+          - container_inspect.rc == 0
+          - ((container_inspect.stdout | from_json)[0].State.Running | bool)
         fail_msg: "InfraRescue container is not running."
         success_msg: "InfraRescue container is running."
 
