@@ -1,0 +1,37 @@
+---
+- name: Configure InfraRescue monitoring service
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create InfraRescue systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/infrarescue-agent.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=InfraRescue Infrastructure Monitoring Agent
+          After=docker.service network.target
+          Requires=docker.service
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          Group=ec2-user
+          WorkingDirectory=/opt/infrarescue/agent
+          ExecStart=/usr/bin/python3 -u /opt/infrarescue/agent/monitor.py
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start InfraRescue agent
+      ansible.builtin.systemd:
+        name: infrarescue-agent
+        state: started
+        enabled: true

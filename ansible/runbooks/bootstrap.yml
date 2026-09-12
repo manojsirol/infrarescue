@@ -1,0 +1,52 @@
+---
+- name: Bootstrap InfraRescue EC2 server
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Docker
+      ansible.builtin.dnf:
+        name: docker
+        state: present
+
+    - name: Create Docker CLI plugins directory
+      ansible.builtin.file:
+        path: /usr/local/lib/docker/cli-plugins
+        state: directory
+        mode: "0755"
+
+    - name: Install Docker Compose plugin
+      ansible.builtin.get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: /usr/local/lib/docker/cli-plugins/docker-compose
+        mode: "0755"
+        force: true
+
+    - name: Install Docker Buildx v0.37.0
+      ansible.builtin.get_url:
+        url: https://github.com/docker/buildx/releases/download/v0.37.0/buildx-v0.37.0.linux-amd64
+        dest: /usr/local/lib/docker/cli-plugins/docker-buildx
+        mode: "0755"
+        force: true
+
+    - name: Start and enable Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+    - name: Install Git
+      ansible.builtin.dnf:
+        name: git
+        state: present
+
+    - name: Install Python pip
+      ansible.builtin.dnf:
+        name: python3-pip
+        state: present
