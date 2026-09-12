@@ -40,7 +40,22 @@ terraform.tfstate
 terraform.tfstate.*
 .terraform/
 
+# Terraform sensitive local variables
+*.tfvars
+*.tfvars.json
 
+# Keep example variables
+!*.tfvars.example
+
+# Terraform crash files
+crash.log
+crash.*.log
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # ==========================================
 # Runtime Data
