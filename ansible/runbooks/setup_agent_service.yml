@@ -3,10 +3,43 @@
   hosts: all
   become: true
 
+  vars:
+    infrarescue_aws_region: "ap-south-1"
+
   tasks:
+    - name: Validate SNS topic ARN
+      ansible.builtin.assert:
+        that:
+          - infrarescue_sns_topic_arn is defined
+          - infrarescue_sns_topic_arn | length > 0
+        fail_msg: >
+          SNS topic ARN is required.
+          Pass it using -e infrarescue_sns_topic_arn=<ARN>.
+
+    - name: Create InfraRescue configuration directory
+      ansible.builtin.file:
+        path: /etc/infrarescue
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create InfraRescue environment file
+      ansible.builtin.copy:
+        dest: /etc/infrarescue/environment
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          AWS_REGION={{ infrarescue_aws_region }}
+          INFRARESCUE_SNS_TOPIC_ARN={{ infrarescue_sns_topic_arn }}
+      no_log: true
+
     - name: Create InfraRescue systemd service
       ansible.builtin.copy:
         dest: /etc/systemd/system/infrarescue-agent.service
+        owner: root
+        group: root
         mode: "0644"
         content: |
           [Unit]
@@ -18,6 +51,7 @@
           User=ec2-user
           Group=ec2-user
           WorkingDirectory=/opt/infrarescue/agent
+          EnvironmentFile=/etc/infrarescue/environment
           ExecStart=/usr/bin/python3 -u /opt/infrarescue/agent/monitor.py
           Restart=always
           RestartSec=5
@@ -29,8 +63,8 @@
       ansible.builtin.systemd:
         daemon_reload: true
 
-    - name: Enable and start InfraRescue agent
+    - name: Enable and restart InfraRescue agent
       ansible.builtin.systemd:
         name: infrarescue-agent
-        state: started
+        state: restarted
         enabled: true

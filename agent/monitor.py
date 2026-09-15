@@ -6,6 +6,7 @@ from datetime import datetime
 from healthcheck import run_all_checks
 from diagnosis import diagnose
 from remediation import execute_remediation
+from escalation import send_escalation_alert
 
 
 CHECK_INTERVAL = 10
@@ -215,6 +216,47 @@ def update_incident_after_remediation(
     save_incidents(incidents)
 
 
+def resolve_recovered_incidents():
+    """
+    Resolve active incidents when infrastructure
+    has returned to a healthy state.
+    """
+
+    incidents = load_incidents()
+
+    updated = False
+
+    for incident in incidents:
+
+        if (
+            incident.get("service") == CONTAINER_NAME
+            and incident.get("status") in [
+                "OPEN",
+                "ESCALATED"
+            ]
+        ):
+
+            incident["status"] = "RESOLVED"
+
+            incident["resolution"] = (
+                "Infrastructure recovered and all "
+                "health checks are passing."
+            )
+
+            incident["resolved_at"] = get_timestamp()
+
+            print(
+                f"[RECOVERED] "
+                f"{incident['id']} - "
+                f"{incident['root_cause']}"
+            )
+
+            updated = True
+
+    if updated:
+        save_incidents(incidents)
+
+
 def print_diagnosis(diagnosis_result):
     """
     Display the diagnosis result clearly.
@@ -292,6 +334,12 @@ def monitor():
                     "All infrastructure checks passed"
                 )
 
+                # -------------------------------------
+                # Recovery detection
+                # -------------------------------------
+
+                resolve_recovered_incidents()
+
             else:
 
                 print(
@@ -366,6 +414,41 @@ def monitor():
                         incident,
                         remediation_result
                     )
+
+                    # ---------------------------------
+                    # Incident escalation notification
+                    # ---------------------------------
+
+                    if (
+                        remediation_result["action"]
+                        == "ESCALATE"
+                    ):
+
+                        print(
+                            "[ALERT] Sending incident "
+                            "escalation notification..."
+                        )
+
+                        alert_result = (
+                            send_escalation_alert(
+                                incident,
+                                diagnosis_result
+                            )
+                        )
+
+                        if alert_result["success"]:
+
+                            print(
+                                "[ALERT SENT] "
+                                f"{alert_result['message']}"
+                            )
+
+                        else:
+
+                            print(
+                                "[ALERT FAILED] "
+                                f"{alert_result['message']}"
+                            )
 
             time.sleep(
                 CHECK_INTERVAL

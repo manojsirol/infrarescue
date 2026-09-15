@@ -1,16 +1,9 @@
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
+# Pin the AMI used by the existing InfraRescue EC2 instance.
+# This prevents a newer Amazon Linux AMI from unexpectedly
+# forcing replacement of the existing server.
 
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+locals {
+  amazon_linux_ami = "ami-07f35208dba26f009"
 }
 
 resource "aws_key_pair" "infrarescue" {
@@ -24,11 +17,12 @@ resource "aws_key_pair" "infrarescue" {
 }
 
 resource "aws_instance" "infrarescue" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami = local.amazon_linux_ami
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.infrarescue.id]
   key_name               = aws_key_pair.infrarescue.key_name
+  iam_instance_profile   = aws_iam_instance_profile.infrarescue.name
 
   root_block_device {
     volume_type = "gp3"

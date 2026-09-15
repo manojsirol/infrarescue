@@ -28,6 +28,11 @@
         group: ec2-user
         mode: "0644"
 
+    - name: Install InfraRescue Python dependencies
+      ansible.builtin.pip:
+        requirements: /opt/infrarescue/agent/requirements.txt
+        executable: pip3
+
     - name: Create InfraRescue recovery runbooks directory
       ansible.builtin.file:
         path: /opt/infrarescue/runbooks
