@@ -4,7 +4,6 @@
 
 __pycache__/
 *.py[cod]
-*.pyo
 
 # Virtual environments
 .venv/
@@ -25,7 +24,7 @@ dist/
 .env.*
 *.env
 
-# Credentials
+# Credentials and private keys
 credentials
 credentials.*
 *.pem
@@ -33,44 +32,36 @@ credentials.*
 *.p12
 *.pfx
 
-# AWS
+# AWS local credentials
 .aws/
 aws-credentials
-terraform.tfstate
-terraform.tfstate.*
-.terraform/
 
-# Terraform sensitive local variables
+
+# ==========================================
+# Terraform
+# ==========================================
+
+.terraform/
+*.tfstate
+*.tfstate.*
 *.tfvars
 *.tfvars.json
 
-# Keep example variables
-!*.tfvars.example
-
-# Terraform crash files
-crash.log
-crash.*.log
-
-# Terraform override files
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
 
 # ==========================================
-# Runtime Data
+# InfraRescue Runtime Data
 # ==========================================
 
 incidents/*.json
 logs/
 *.log
 
-# Keep incident directory structure
+# Keep incidents directory in Git
 !incidents/.gitkeep
 
 
 # ==========================================
-# IDE
+# IDE / Editor
 # ==========================================
 
 .vscode/
@@ -78,7 +69,7 @@ logs/
 
 
 # ==========================================
-# OS
+# Operating System
 # ==========================================
 
 .DS_Store
@@ -93,5 +84,10 @@ Thumbs.db
 *.temp
 *.swp
 
-# Ansible local inventory / secrets
+# ==========================================
+# Ansible Local Configuration
+# ==========================================
+
+# Real inventory may contain IPs, usernames,
+# SSH key paths, and environment-specific data
 ansible/inventory.ini
