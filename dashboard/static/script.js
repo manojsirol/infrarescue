@@ -2,192 +2,572 @@ async function loadDashboard() {
 
     try {
 
-        const statusResponse = await fetch("/api/status");
-        const status = await statusResponse.json();
-
-        document.getElementById("servicesChecked").textContent =
-            status.services_checked;
-
-        document.getElementById("runningServices").textContent =
-            status.running_services;
-
-        document.getElementById("activeIncidents").textContent =
-            status.incidents;
-
-        document.getElementById("systemHealth").textContent =
-            status.health;
+        const [
+            statusResponse,
+            healthResponse,
+            incidentResponse
+        ] = await Promise.all([
+            fetch("/api/status"),
+            fetch("/api/health"),
+            fetch("/api/incidents")
+        ]);
 
 
-        const systemStatus = document.getElementById("systemStatus");
+        if (
+            !statusResponse.ok ||
+            !healthResponse.ok ||
+            !incidentResponse.ok
+        ) {
 
-        systemStatus.textContent = status.system_status;
-
-
-        if (status.incidents > 0) {
-
-            systemStatus.classList.remove("healthy");
-            systemStatus.classList.add("critical");
-
-        } else {
-
-            systemStatus.classList.remove("critical");
-            systemStatus.classList.add("healthy");
-
+            throw new Error(
+                "Dashboard API request failed"
+            );
         }
 
 
-        const incidentResponse = await fetch("/api/incidents");
+        const status =
+            await statusResponse.json();
 
-        const incidents = await incidentResponse.json();
+        const health =
+            await healthResponse.json();
 
-        updateIncidents(incidents);
+        const incidents =
+            await incidentResponse.json();
 
-        updateApplicationStatus(incidents);
+
+        updateSummary(status);
+
+        updateInfrastructure(
+            health.components || []
+        );
+
+        updateIncidents(
+            incidents
+        );
 
     }
 
     catch (error) {
 
-        console.error("Dashboard update failed:", error);
+        console.error(
+            "Dashboard update failed:",
+            error
+        );
 
+        document.getElementById(
+            "systemStatus"
+        ).textContent =
+            "DASHBOARD DATA UNAVAILABLE";
     }
-
 }
 
 
-function updateApplicationStatus(incidents) {
 
-    const applicationMessage =
-        document.getElementById("applicationMessage");
+function updateSummary(status) {
 
-    const applicationBadge =
-        document.getElementById("applicationBadge");
-
-    const applicationDot =
-        document.getElementById("applicationDot");
+    document.getElementById(
+        "servicesChecked"
+    ).textContent =
+        status.total_components;
 
 
-    const unresolvedIncident = incidents.find(
-        incident => incident.status !== "Resolved"
-    );
+    document.getElementById(
+        "runningServices"
+    ).textContent =
+        status.healthy_components;
 
 
-    if (unresolvedIncident) {
+    document.getElementById(
+        "activeIncidents"
+    ).textContent =
+        status.active_incidents;
 
-        applicationMessage.textContent =
-            unresolvedIncident.service + " is not running";
 
-        applicationBadge.textContent =
-            "INCIDENT";
+    document.getElementById(
+        "systemHealth"
+    ).textContent =
+        status.health;
 
-        applicationBadge.className =
-            "badge failed-badge";
 
-        applicationDot.className =
-            "status-dot failed-dot";
+    const systemStatus =
+        document.getElementById(
+            "systemStatus"
+        );
+
+
+    systemStatus.textContent =
+        status.system_status;
+
+
+    systemStatus.className =
+        "system-status";
+
+
+    const normalizedHealth =
+        status.health.toLowerCase();
+
+
+    if (
+        normalizedHealth === "healthy"
+    ) {
+
+        systemStatus.classList.add(
+            "healthy"
+        );
+
+    }
+
+    else if (
+        normalizedHealth === "warning"
+    ) {
+
+        systemStatus.classList.add(
+            "warning"
+        );
 
     }
 
     else {
 
-        applicationMessage.textContent =
-            "infrarescue-app is running";
+        systemStatus.classList.add(
+            "critical"
+        );
+    }
 
-        applicationBadge.textContent =
-            "RUNNING";
 
-        applicationBadge.className =
-            "badge success-badge";
+    const lastUpdated =
+        document.getElementById(
+            "lastUpdated"
+        );
 
-        applicationDot.className =
-            "status-dot healthy-dot";
+
+    if (status.last_updated) {
+
+        lastUpdated.textContent =
+            `Last agent check: ${status.last_updated} | Dashboard refresh: every 5 seconds`;
 
     }
 
+    else {
+
+        lastUpdated.textContent =
+            "Waiting for InfraRescue agent health data...";
+    }
 }
 
 
-function updateIncidents(incidents) {
+
+function getStatusStyle(status) {
+
+    switch (status) {
+
+        case "healthy":
+
+            return {
+                dot: "healthy-dot",
+                badge: "success-badge"
+            };
+
+
+        case "warning":
+
+            return {
+                dot: "warning-dot",
+                badge: "warning-badge"
+            };
+
+
+        case "not_applicable":
+
+            return {
+                dot: "neutral-dot",
+                badge: "neutral-badge"
+            };
+
+
+        case "unknown":
+
+            return {
+                dot: "neutral-dot",
+                badge: "neutral-badge"
+            };
+
+
+        default:
+
+            return {
+                dot: "failed-dot",
+                badge: "failed-badge"
+            };
+    }
+}
+
+
+
+function getComponentTitle(component) {
+
+    const names = {
+
+        ec2:
+            "AWS EC2 Environment",
+
+        host:
+            "Host System",
+
+        network:
+            "Network Connectivity",
+
+        cpu:
+            "CPU Utilization",
+
+        memory:
+            "Memory Utilization",
+
+        disk:
+            "Disk Utilization",
+
+        docker:
+            "Docker Engine",
+
+        container:
+            "Application Container",
+
+        port:
+            "Application Port",
+
+        application:
+            "Application Health"
+    };
+
+
+    return (
+        names[component] ||
+        component
+    );
+}
+
+
+
+function updateInfrastructure(
+    components
+) {
+
+    const serviceList =
+        document.getElementById(
+            "serviceList"
+        );
+
+
+    if (
+        !Array.isArray(components) ||
+        components.length === 0
+    ) {
+
+        serviceList.innerHTML = `
+
+            <div class="empty-state">
+
+                No live infrastructure data available.
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    serviceList.innerHTML = "";
+
+
+    components.forEach(
+        (component, index) => {
+
+            const style =
+                getStatusStyle(
+                    component.status
+                );
+
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.className =
+                "service-item";
+
+
+            let metric = "";
+
+
+            if (
+                component.usage_percent
+                !== undefined
+            ) {
+
+                metric = `
+
+                    <span class="metric">
+
+                        ${component.usage_percent}%
+
+                    </span>
+                `;
+            }
+
+
+            item.innerHTML = `
+
+                <div class="service-left">
+
+                    <span
+                        class="status-dot ${style.dot}"
+                    ></span>
+
+                    <div>
+
+                        <h3>
+
+                            ${index + 1}.
+                            ${getComponentTitle(
+                                component.component
+                            )}
+
+                        </h3>
+
+                        <p>
+
+                            ${component.message || "No information"}
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="service-right">
+
+                    ${metric}
+
+                    <span
+                        class="badge ${style.badge}"
+                    >
+
+                        ${component.status
+                            .replace("_", " ")
+                            .toUpperCase()}
+
+                    </span>
+
+                </div>
+            `;
+
+
+            serviceList.appendChild(
+                item
+            );
+        }
+    );
+}
+
+
+
+function updateIncidents(
+    incidents
+) {
 
     const incidentList =
-        document.getElementById("incidentList");
+        document.getElementById(
+            "incidentList"
+        );
 
 
-    if (incidents.length === 0) {
+    if (
+        !Array.isArray(incidents) ||
+        incidents.length === 0
+    ) {
 
         incidentList.innerHTML = `
 
             <div class="empty-state">
-                No incidents detected.
-                Infrastructure is operating normally.
-            </div>
 
+                No incidents detected.
+                Infrastructure incident history is empty.
+
+            </div>
         `;
 
         return;
-
     }
 
 
     incidentList.innerHTML = "";
 
 
-    incidents.forEach(incident => {
+    incidents.forEach(
+        incident => {
 
-        const incidentCard =
-            document.createElement("div");
-
-        incidentCard.className =
-            "incident-card";
-
-
-        incidentCard.innerHTML = `
-
-            <h3>${incident.id}</h3>
-
-            <p>
-                <strong>Service:</strong>
-                ${incident.service}
-            </p>
-
-            <p>
-                <strong>Detected:</strong>
-                ${incident.detected_at}
-            </p>
-
-            <p>
-                <strong>Problem:</strong>
-                ${incident.problem}
-            </p>
-
-            <p>
-                <strong>Classification:</strong>
-                ${incident.classification}
-            </p>
-
-            <p>
-                <strong>Action:</strong>
-                ${incident.action}
-            </p>
-
-            <p>
-                <strong>Status:</strong>
-                ${incident.status}
-            </p>
-
-        `;
+            const incidentCard =
+                document.createElement(
+                    "div"
+                );
 
 
-        incidentList.appendChild(
-            incidentCard
-        );
+            incidentCard.className =
+                "incident-card";
 
-    });
 
+            const symptoms =
+                Array.isArray(
+                    incident.dependent_symptoms
+                )
+                    ? incident
+                        .dependent_symptoms
+                        .join(", ")
+                    : "None";
+
+
+            incidentCard.innerHTML = `
+
+                <div class="incident-header">
+
+                    <h3>
+                        ${incident.id}
+                    </h3>
+
+                    <span class="incident-status">
+
+                        ${incident.status || "UNKNOWN"}
+
+                    </span>
+
+                </div>
+
+
+                <p>
+
+                    <strong>
+                        Service:
+                    </strong>
+
+                    ${incident.service || "Unknown"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Detected:
+                    </strong>
+
+                    ${incident.timestamp || "Unknown"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Root Cause:
+                    </strong>
+
+                    ${incident.root_cause || "Unknown"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Severity:
+                    </strong>
+
+                    ${incident.severity || "Unknown"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Confidence:
+                    </strong>
+
+                    ${incident.confidence || "Unknown"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Recommended Action:
+                    </strong>
+
+                    ${incident.recommended_action || "None"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Message:
+                    </strong>
+
+                    ${incident.message || "No message"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Dependent Symptoms:
+                    </strong>
+
+                    ${symptoms || "None"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Resolution:
+                    </strong>
+
+                    ${incident.resolution || "Pending"}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Resolved At:
+                    </strong>
+
+                    ${incident.resolved_at || "Pending"}
+
+                </p>
+            `;
+
+
+            incidentList.appendChild(
+                incidentCard
+            );
+        }
+    );
 }
 
 
+
 loadDashboard();
+
 
 setInterval(
     loadDashboard,

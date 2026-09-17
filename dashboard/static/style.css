@@ -243,3 +243,56 @@ footer {
     }
 
 }
+
+.warning {
+    color: #d97706;
+}
+
+.warning-dot {
+    background: #f59e0b;
+}
+
+.neutral-dot {
+    background: #94a3b8;
+}
+
+.warning-badge {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.neutral-badge {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.service-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.metric {
+    font-size: 14px;
+    font-weight: bold;
+    color: #475569;
+    min-width: 55px;
+    text-align: right;
+}
+
+.incident-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.incident-status {
+    font-size: 12px;
+    font-weight: bold;
+    background: #fee2e2;
+    color: #b91c1c;
+    border-radius: 20px;
+    padding: 6px 10px;
+}

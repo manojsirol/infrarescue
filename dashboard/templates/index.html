@@ -2,176 +2,233 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>InfraRescue Dashboard</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>
+        InfraRescue Operations Center
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
 </head>
+
 
 <body>
 
-    <div class="container">
-
-        <header>
-            <div>
-                <h1>InfraRescue</h1>
-                <p>Automated Infrastructure Incident Detection and Safe Recovery Platform</p>
-            </div>
-
-            <div class="live-status">
-                <span class="pulse"></span>
-                LIVE MONITORING
-            </div>
-        </header>
+<div class="container">
 
 
-        <section class="health-section">
+    <header>
 
-            <div class="system-status healthy" id="systemStatus">
-                ALL SYSTEMS OPERATIONAL
-            </div>
+        <div>
 
-            <p class="last-updated">
-                Dashboard updates automatically every 5 seconds
+            <h1>
+                InfraRescue
+            </h1>
+
+            <p>
+                Automated Infrastructure Incident
+                Detection, Diagnosis and Safe Recovery
             </p>
 
-        </section>
+        </div>
 
 
-        <section class="stats-grid">
+        <div class="live-status">
 
-            <div class="card">
-                <p class="card-title">Services Checked</p>
-                <h2 id="servicesChecked">0</h2>
-            </div>
+            <span class="pulse"></span>
 
-            <div class="card">
-                <p class="card-title">Running</p>
-                <h2 class="success" id="runningServices">0</h2>
-            </div>
+            LIVE MONITORING
 
-            <div class="card">
-                <p class="card-title">Active Incidents</p>
-                <h2 class="danger" id="activeIncidents">0</h2>
-            </div>
+        </div>
 
-            <div class="card">
-                <p class="card-title">System Health</p>
-                <h2 id="systemHealth">Checking...</h2>
-            </div>
-
-        </section>
+    </header>
 
 
-        <section class="section">
 
-            <div class="section-header">
-                <div>
-                    <h2>Infrastructure Checks</h2>
-                    <p>Step-by-step system diagnosis</p>
-                </div>
-            </div>
+    <section class="health-section">
 
-
-            <div class="service-list">
-
-                <div class="service-item">
-                    <div class="service-left">
-                        <span class="status-dot healthy-dot"></span>
-                        <div>
-                            <h3>1. Host System</h3>
-                            <p>System available and responding</p>
-                        </div>
-                    </div>
-
-                    <span class="badge success-badge">HEALTHY</span>
-                </div>
+        <div
+            class="system-status"
+            id="systemStatus"
+        >
+            CHECKING INFRASTRUCTURE...
+        </div>
 
 
-                <div class="service-item">
-                    <div class="service-left">
-                        <span class="status-dot healthy-dot"></span>
-                        <div>
-                            <h3>2. Docker Engine</h3>
-                            <p>Docker service available</p>
-                        </div>
-                    </div>
+        <p
+            class="last-updated"
+            id="lastUpdated"
+        >
+            Waiting for health data...
+        </p>
 
-                    <span class="badge success-badge">RUNNING</span>
-                </div>
+    </section>
 
 
-                <div class="service-item">
-                    <div class="service-left">
-                        <span class="status-dot healthy-dot"></span>
-                        <div>
-                            <h3>3. Network Connectivity</h3>
-                            <p>Network connection available</p>
-                        </div>
-                    </div>
 
-                    <span class="badge success-badge">HEALTHY</span>
-                </div>
+    <section class="stats-grid">
 
 
-                <div class="service-item" id="applicationService">
+        <div class="card">
 
-                    <div class="service-left">
-                        <span class="status-dot healthy-dot" id="applicationDot"></span>
+            <p class="card-title">
+                Components
+            </p>
 
-                        <div>
-                            <h3>4. Application Container</h3>
+            <h2 id="servicesChecked">
+                0
+            </h2>
 
-                            <p id="applicationMessage">
-                                infrarescue-app is running
-                            </p>
-                        </div>
-
-                    </div>
-
-                    <span class="badge success-badge" id="applicationBadge">
-                        RUNNING
-                    </span>
-
-                </div>
-
-            </div>
-
-        </section>
+        </div>
 
 
-        <section class="section">
+        <div class="card">
 
-            <div class="section-header">
+            <p class="card-title">
+                Healthy
+            </p>
 
-                <div>
-                    <h2>Incident History</h2>
-                    <p>Detected infrastructure incidents</p>
-                </div>
+            <h2
+                class="success"
+                id="runningServices"
+            >
+                0
+            </h2>
 
-            </div>
+        </div>
 
 
-            <div id="incidentList">
+        <div class="card">
 
-                <div class="empty-state">
-                    No incidents detected. Infrastructure is operating normally.
-                </div>
+            <p class="card-title">
+                Active Incidents
+            </p>
+
+            <h2
+                class="danger"
+                id="activeIncidents"
+            >
+                0
+            </h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <p class="card-title">
+                System Health
+            </p>
+
+            <h2 id="systemHealth">
+                Checking...
+            </h2>
+
+        </div>
+
+
+    </section>
+
+
+
+    <section class="section">
+
+
+        <div class="section-header">
+
+            <div>
+
+                <h2>
+                    Infrastructure Health
+                </h2>
+
+                <p>
+                    Live component-level infrastructure
+                    monitoring
+                </p>
 
             </div>
 
-        </section>
+        </div>
 
 
-        <footer>
-            <p>InfraRescue • Open Source Infrastructure Monitoring and Recovery Platform</p>
-        </footer>
+        <div
+            class="service-list"
+            id="serviceList"
+        >
 
-    </div>
+            <div class="empty-state">
+                Waiting for infrastructure health data...
+            </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+        </div>
+
+
+    </section>
+
+
+
+    <section class="section">
+
+
+        <div class="section-header">
+
+            <div>
+
+                <h2>
+                    Incident History
+                </h2>
+
+                <p>
+                    Diagnosis, remediation and escalation
+                    history
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div id="incidentList">
+
+            <div class="empty-state">
+                No incidents detected.
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+
+    <footer>
+
+        <p>
+            InfraRescue • Infrastructure Monitoring,
+            Diagnosis and Recovery Platform
+        </p>
+
+    </footer>
+
+
+</div>
+
+
+<script
+    src="{{ url_for('static', filename='script.js') }}"
+></script>
+
 
 </body>
 

@@ -91,3 +91,8 @@ Thumbs.db
 # Real inventory may contain IPs, usernames,
 # SSH key paths, and environment-specific data
 ansible/inventory.ini
+
+# InfraRescue live runtime state
+runtime/
+
+*.backup
